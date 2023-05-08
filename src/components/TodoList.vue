@@ -3,7 +3,7 @@
     <div class="header">
       <img
         src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Sogeti-logo-2018.svg/1200px-Sogeti-logo-2018.svg.png"
-        alt="Logo"
+        alt="Capgemini image"
       />
     </div>
     <div class="todo-list">
@@ -15,7 +15,11 @@
               v-model="task.completed"
               @change="updateTaskOrder(task)"
             />
-            <a :class="{ completed: task.completed }">{{ task.title }}</a>
+            <a
+              :class="{ completed: task.completed }"
+              @click="viewTodoDetails(task.id)"
+              >{{ task.title }}</a
+            >
           </div>
           <span
             class="task-status"
@@ -72,7 +76,6 @@ export default {
     //We use axiosInstance to send an HTTP GET request to the URL "/todos". then we store the returned data in the variable todos
     axiosInstance.get("/todos").then((response) => {
       this.todos = response.data;
- 
     });
   },
   methods: {
@@ -95,6 +98,9 @@ export default {
           }
         })
         .catch((error) => {});
+    },
+    viewTodoDetails(todoId) {
+      this.$router.push({ name: "TodoDetail", params: { id: todoId } });
     },
   },
 };

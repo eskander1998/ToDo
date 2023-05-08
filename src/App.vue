@@ -1,5 +1,5 @@
 <template>
-  <TodoList/>
+  <router-view />
 </template>
 
 <script>
