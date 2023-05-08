@@ -6,6 +6,21 @@
         alt="Capgemini image"
       />
     </div>
+
+    <form @submit.prevent="addTask">
+      <input
+        type="text"
+        v-model="taskTitle"
+        placeholder="Task title"
+        required
+      />
+      <textarea
+        type="text"
+        v-model="taskDescription"
+        placeholder="Task Description"
+      />
+      <button type="submit">Add task</button>
+    </form>
     <div class="todo-list">
       <ul>
         <li v-for="task in todos" :key="task.id">
@@ -51,7 +66,6 @@ mock.onGet("/todos").reply(200, todos);
 // regex /\/todos\/\d+/ matches any string that contains "todos" followed by one or more digits, separated by slashes.
 mock.onPatch(/\/todos\/\d+/).reply((config) => {
   const id = parseInt(config.url.split("/").pop());
-  console.log("config.data", config.data);
   const updatedTask = JSON.parse(config.data);
   const index = todos.findIndex((task) => task.id === id);
   if (index !== -1) {
@@ -64,21 +78,59 @@ mock.onPatch(/\/todos\/\d+/).reply((config) => {
     return [404, {}];
   }
 });
+// simulates an http post request for a new task to the todos list and returning a 201 response code with the new task added.
+mock.onPost("/todos").reply((config) => {
+  const newTask = JSON.parse(config.data);
+  newTask.id = todos.length + 1;
+  newTask.completed = false;
+  todos.push(newTask);
+  return [201, newTask];
+});
+
 export default {
   name: "TodoList",
   components: {},
   data() {
     return {
       todos: [],
+      taskTitle: "",
+      taskDescription: "",
     };
   },
   mounted() {
     //We use axiosInstance to send an HTTP GET request to the URL "/todos". then we store the returned data in the variable todos
     axiosInstance.get("/todos").then((response) => {
       this.todos = response.data;
+      this.todos
+        .sort((a, b) => {
+          b.id - a.id;
+        })
+        .sort((a, b) => {
+          // When there are two tasks whose completed status is equal, they should not be sorted between them because their order does not matter. So we return 0 to indicate that they should not be sorted.
+          if (a.completed === b.completed) return 0; // Completed status is equal, no sorting needed
+          // When one task is completed and the other is not, we want the completed task to be at the bottom of the list, so we return 1.
+          if (a.completed && !b.completed) return 1; // Sort completed tasks to the bottom
+          // When one task is not completed and the other is, we want the uncompleted task to be at the top of the list, so we return -1.
+          if (!a.completed && b.completed) return -1;
+        });
     });
   },
   methods: {
+    //method to add a new task 
+    addTask() {
+      const newTask = {
+        title: this.taskTitle,
+        completed: false,
+        description: this.taskDescription,
+      };
+      // we send an HTTP POST request to the "/todos" API with the new task data . Then we add the new task on the top of the list 
+      axiosInstance.post("/todos", newTask).then((response) => {
+        var taskToAdd = JSON.parse(JSON.stringify(response.data));
+        this.todos.unshift(taskToAdd);
+        this.taskTitle = "";
+        this.taskDescription = "";
+      });
+    },
     updateTaskOrder(task) {
       axiosInstance
         .patch(`/todos/${task.id}`, task)
@@ -97,6 +149,7 @@ export default {
             }
           }
         })
+
         .catch((error) => {});
     },
     viewTodoDetails(todoId) {
@@ -175,5 +228,46 @@ a:hover {
 .completed {
   text-decoration: line-through;
   color: #bbb;
+}
+form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 500px;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 10px;
+}
+
+input[type="text"],
+textarea {
+  margin: 10px 0;
+  padding: 10px;
+  font-size: 1rem;
+  border: none;
+  background-color: #f2f2f2;
+  border-radius: 5px;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+input[type="text"]:focus,
+textarea:focus {
+  outline: none;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.3);
+}
+
+button[type="submit"] {
+  margin-top: 20px;
+  padding: 10px;
+  font-size: 1rem;
+  color: #fff;
+  background-color: #0071af;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button[type="submit"]:hover {
+  background-color: #bbb;
 }
 </style>
