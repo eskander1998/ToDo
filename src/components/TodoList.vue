@@ -9,7 +9,14 @@
     <div class="todo-list">
       <ul>
         <li v-for="task in todos" :key="task.id">
-          <a>{{ task.title }}</a>
+          <div>
+            <input
+              type="checkbox"
+              v-model="task.completed"
+              @change="updateTaskOrder(task)"
+            />
+            <a :class="{ completed: task.completed }">{{ task.title }}</a>
+          </div>
           <span
             class="task-status"
             :class="{
@@ -36,7 +43,23 @@ const axiosInstance = axios.create();
 const mock = new MockAdapter(axiosInstance);
 //simulate an http get request that responds with an HTTP 200 code and simulated data stored in the "todos" variable
 mock.onGet("/todos").reply(200, todos);
-
+//PATCH request to an endpoint containing a task ID in the URL, which updates the corresponding task. it returns an HTTP 200 response if the task is found, otherwise an HTTP 404 response.
+// regex /\/todos\/\d+/ matches any string that contains "todos" followed by one or more digits, separated by slashes.
+mock.onPatch(/\/todos\/\d+/).reply((config) => {
+  const id = parseInt(config.url.split("/").pop());
+  console.log("config.data", config.data);
+  const updatedTask = JSON.parse(config.data);
+  const index = todos.findIndex((task) => task.id === id);
+  if (index !== -1) {
+    todos[index] = updatedTask;
+    if (updatedTask.completed) {
+      todos.push(todos.splice(index, 1)[0]);
+    }
+    return [200, updatedTask];
+  } else {
+    return [404, {}];
+  }
+});
 export default {
   name: "TodoList",
   components: {},
@@ -49,9 +72,31 @@ export default {
     //We use axiosInstance to send an HTTP GET request to the URL "/todos". then we store the returned data in the variable todos
     axiosInstance.get("/todos").then((response) => {
       this.todos = response.data;
+ 
     });
   },
-  methods: {},
+  methods: {
+    updateTaskOrder(task) {
+      axiosInstance
+        .patch(`/todos/${task.id}`, task)
+        .then(() => {
+          const index = this.todos.findIndex((t) => t.id === task.id);
+          if (index !== -1) {
+            this.todos.splice(index, 1);
+            if (task.completed) {
+              // If it is a completed task, we put it at the bottom
+              this.todos.push(task);
+            } else {
+              // If it is an uncompleted task, we put it back to its initial position
+              let i = this.todos.findIndex((t) => t.id > task.id);
+              if (i === -1) i = this.todos.length;
+              this.todos.splice(i, 0, task);
+            }
+          }
+        })
+        .catch((error) => {});
+    },
+  },
 };
 </script>
 
@@ -119,5 +164,10 @@ a {
 
 a:hover {
   color: #555;
+}
+
+.completed {
+  text-decoration: line-through;
+  color: #bbb;
 }
 </style>
