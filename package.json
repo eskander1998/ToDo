@@ -18,5 +18,17 @@
     "axios-mock-adapter": "^1.21.4",
     "vite": "^4.3.2",
     "vue-template-compiler": "^2.7.14"
+  },
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/todo.umd.js",
+  "module": "./dist/todo.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/todo.es.js",
+      "require": "./dist/todo.umd.js"
+    },
+    "./style.css": "./dist/style.css"
   }
 }
